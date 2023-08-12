@@ -1,0 +1,22 @@
+[
+    {
+        "Question_Statement": "What is the official name of India?",
+        "Correct_Option": "The Republic of India",
+        "Incorrect_Option1": "The Indian Republic",
+        "Explain_Incorrect1": "This is incorrect because it does not match the official name mentioned in the context.",
+        "Incorrect_Option2": "The United States of India",
+        "Explain_Incorrect2": "This is incorrect because it is a completely different name that is not mentioned in the context.",
+        "Incorrect_Option3": "The Democratic Republic of India",
+        "Explain_Incorrect3": "This is incorrect because it does not match the official name mentioned in the context."
+    },
+    {
+        "Question_Statement": "Where is India located?",
+        "Correct_Option": "South Asia",
+        "Incorrect_Option1": "North America",
+        "Explain_Incorrect1": "North America is a continent located in the northern hemisphere, India is not located there.",
+        "Incorrect_Option2": "Europe",
+        "Explain_Incorrect2": "Europe is a continent located in the western part of Eurasia, India is not located there.",
+        "Incorrect_Option3": "Africa",
+        "Explain_Incorrect3": "Africa is a continent located in the eastern hemisphere, India is not located there."
+    }
+]
