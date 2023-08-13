@@ -34,14 +34,17 @@ def load_docs(directory):
     Returns:
         list: List of loaded documents.
     """
-    print("Starting Documents loading ....")
-    try:
-        loader = PyPDFDirectoryLoader(directory)
-        documents = loader.load()
-        print("Documents Loaded Successfully!")
-        return documents
-    except Exception as e:
-        print("Some Error occurred during Document loading", e)
+    with st.spinner("Loading Documents... Please wait."):
+        print("Starting Documents loading ....")
+        try:
+            loader = PyPDFDirectoryLoader(directory)
+            documents = loader.load()
+            print("Documents Loaded Successfully!")
+            st.success("Documents loading completed!")
+            return documents
+        except Exception as e:
+            st.error("Documents loading Failed!")
+            print("Some Error occurred during Document loading", e)
 
 
 # Function to split documents into snippets of text
@@ -57,17 +60,25 @@ def split_docs(documents, chunk_size=1000, chunk_overlap=200):
     Returns:
         list: List of split documents.
     """
-    try:
-        print("Starting Documents splitting ....")
-        text_splitter = RecursiveCharacterTextSplitter(
-            length_function=len,
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap)
-        split_docs = text_splitter.split_documents(documents)
-        print("Documents splitted successfully!")
-        return split_docs
-    except Exception as e:
-        print("Some Error occurred during Document splitting", e)
+    #     with st.spinner("Loading... Please wait."):
+    #         # Simulate a time-consuming task
+    #         time.sleep(3)
+    #     # Once the task is complete, clear the loading spinner
+    #     st.success("Task completed!")
+    with st.spinner("Splitting Documents... Please wait."):
+        try:
+            print("Starting Documents splitting ....")
+            text_splitter = RecursiveCharacterTextSplitter(
+                length_function=len,
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap)
+            split_docs = text_splitter.split_documents(documents)
+            print("Documents splitted successfully!")
+            st.success("Documents splitting completed!")
+            return split_docs
+        except Exception as e:
+            st.error("Documents splitting Failed!")
+            print("Some Error occurred during Document splitting", e)
 
 
 # Function to store document chunks to Supabase
@@ -221,18 +232,93 @@ def MCQs_Maker(QAs):
 
 
 if __name__ == '__main__':
-    directory = 'Docs/'
-    loaded_documents = load_docs(directory)
+    # ---- Streamlit code --------
+    # Side Bar
+    with st.sidebar:
+        st.title("📝 PDF MCQs Generator App")
+        openai_api_key = st.text_input(
+            "OpenAI API Key",
+            type="password",
+            placeholder="Paste your OpenAI API key here",
+            help="You can get your API key from https://platform.openai.com/account/api-keys.",
+            value=os.environ.get("OPENAI_API_KEY", None)
+            or st.session_state.get("OPENAI_API_KEY", ""),
+        )
+        model_name = st.selectbox("Select a model:", ["GPT-4", "GPT-3.5-turbo"])
+        supabase_url = st.text_input(
+            "SUPABASE URL",
+            type="password",
+            placeholder="Paste your SUPABASE URL here",
+            help="Vist, https://supabase.com/",
+            value=os.environ.get("SUPABASE_URL", None)
+        )
+        supabase_service_key = st.text_input(
+            "SUPABASE SERVICE KEY",
+            type="password",
+            placeholder="Paste your SUPABASE SERVICE KEY here",
+            value=os.environ.get("SUPABASE_SERVICE_KEY", None)
+        )
+        st.markdown("---")
+        st.markdown(
+            "## How to use\n"
+            "1. Enter the required keys 🔑\n"  # noqa: E501
+            "2. Upload a file 📄\n"
+            "3. Enter a prompt to customize quiz 💬\n"
+        )
+
+        "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
+        "[View the source code](https://github.com/streamlit/llm-examples/blob/main/Chatbot.py)"
+
+    #  Main page
+    st.title("📝 PDF MCQs Generator App")
+
+    if not (openai_api_key and model_name and supabase_url and supabase_service_key):
+        st.warning(
+            "Enter your API keys in the sidebar."
+        )
+    # File input
+    uploaded_files = None
+    if openai_api_key and model_name and supabase_url and supabase_service_key:
+        uploaded_files = st.file_uploader('Choose your .pdf files', type="pdf", accept_multiple_files=True)
+
+    # ------- Function Calls ----------
+    # if st.button("Show Loading Spinner"):
+    #     # Display the loading spinner and a message
+    #     with st.spinner("Loading... Please wait."):
+    #         # Simulate a time-consuming task
+    #         time.sleep(3)
+    #     # Once the task is complete, clear the loading spinner
+    #     st.success("Task completed!")
+    if uploaded_files is not None:
+        upload_dir = "Docs"
+        for uploaded_file in uploaded_files:
+            # Create a directory to store uploaded files
+            os.makedirs(upload_dir, exist_ok=True)
+            # Get the filename
+            filename = os.path.join(upload_dir, uploaded_file.name)
+            # Save the uploaded file to the specified directory
+            with open(filename, 'wb') as f:
+                f.write(uploaded_file.read())
+            st.success(f"File '{uploaded_file.name}' uploaded and stored at: {filename}")
+
+        custom_prompt = st.text_input(
+            "Enter a prompt to customize quiz",
+            placeholder="What kind of quiz would you like to make?",
+            disabled=not uploaded_files,
+        )
 
 
-    doc_splits = split_docs(loaded_documents)
-    print("Splits: ",len(doc_splits))
+        # Loading Docs
+        # loaded_documents = load_docs(upload_dir)
+        # doc_splits = split_docs(loaded_documents)
+        # # print("Splits: ",len(doc_splits))
+        #
+        # store_doc_to_supabase(doc_splits)
+        # QAs_docs,QAs_List=asyncio.run(QA_maker(doc_splits[:2]))
+        # store_qa_to_supabase(QAs_docs)
+        #
+        # # Making Mcqs
+        # mcqs=MCQs_Maker(QAs_List[:2])
+        # store_mcqs_to_supabase(mcqs)
 
-
-    store_doc_to_supabase(doc_splits)
-    QAs_docs,QAs_List=asyncio.run(QA_maker(doc_splits[:2]))
-    store_qa_to_supabase(QAs_docs)
-
-    mcqs=MCQs_Maker(QAs_List[:2])
-    store_mcqs_to_supabase(mcqs)
-    print("MileStone1 completed :)")
+        # print("MileStone1 completed :)")
