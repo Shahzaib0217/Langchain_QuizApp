@@ -13,14 +13,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Setting environment variables
-supabase_url = os.environ.get("SUPABASE_URL")
-supabase_key = os.environ.get("SUPABASE_SERVICE_KEY")
-supabase: Client = create_client(supabase_url, supabase_key)
-
-
-
-
 
 # Function to read documents from a directory
 def load_docs(pdfs):
@@ -47,7 +39,7 @@ def load_docs(pdfs):
             st.success("Documents loading completed!")
             return documents
         except Exception as e:
-            st.error("Documents loading Failed!")
+            st.error(f"Documents loading Failed! {e}")
             print("Some Error occurred during Document loading", e)
 
 
@@ -81,12 +73,12 @@ def split_docs(documents, chunk_size=1000, chunk_overlap=200):
             st.success("Documents splitting completed!")
             return split_docs
         except Exception as e:
-            st.error("Documents splitting Failed!")
+            st.error(f"Documents splitting Failed! {e}")
             print("Some Error occurred during Document splitting", e)
 
 
 # Function to store document chunks to Supabase
-def store_doc_to_supabase(doc_splits):
+def store_doc_to_supabase(doc_splits,vector_store):
     with st.spinner("Storing Documents to Database... Please wait."):
         try:
             print("Storing Documents to SupaBase")
@@ -96,32 +88,11 @@ def store_doc_to_supabase(doc_splits):
 
 
 
-# Initializing OpenAI embeddings
-embeddings = OpenAIEmbeddings()
 
-# Initializing Supabase vector store
-vector_store = SupabaseVectorStore(
-    client=supabase,
-    embedding=embeddings,
-    table_name="documents",
-    query_name="match_documents"
-)
 
-vector_store_for_qa = SupabaseVectorStore(
-    client=supabase,
-    embedding=embeddings,
-    table_name="question_answers",
-    query_name="match_question_answers"
-)
 
-vector_store_for_mcqs = SupabaseVectorStore(
-    client=supabase,
-    embedding=embeddings,
-    table_name="mcqs",
-    query_name="match_mcqs"
-)
 
-def store_qa_to_supabase(doc_splits):
+def store_qa_to_supabase(doc_splits,vector_store_for_qa):
     with st.spinner("Storing Q/As in database... Please wait."):
         try:
             print("Storing Questions Answers to SupaBase")
@@ -129,7 +100,7 @@ def store_qa_to_supabase(doc_splits):
         except Exception as e:
             pass
 
-def store_mcqs_to_supabase(doc_splits):
+def store_mcqs_to_supabase(doc_splits,vector_store_for_mcqs):
     with st.spinner("Storing MCQs in database... Please wait."):
         try:
             print("Storing MCQS to SupaBase")
@@ -203,7 +174,7 @@ def QA_maker(doc_splits,custom_prompt="None"):
             return qa_documents,qa_list
         except Exception as e:
             print("Some error occurred during making questions",e)
-            st.error("Q/As making failed!")
+            st.error(f"Q/As making failed! {e}")
             return [],[]
 
 # Function to create MCQs based on questions and answers
@@ -272,7 +243,7 @@ def MCQs_Maker(QAs,custom_prompt="None"):
             st.success("MCQs have been created!")
             return MCQ_list
         except Exception as e:
-            st.error("MCQs creation Failed!")
+            st.error(f"MCQs creation Failed! {e}")
             print("Some Error occurred during Making MCQS",e)
 
 
@@ -287,23 +258,24 @@ if __name__ == '__main__':
             type="password",
             placeholder="Paste your OpenAI API key here",
             help="You can get your API key from https://platform.openai.com/account/api-keys.",
-            value=os.environ.get("OPENAI_API_KEY", None)
-            or st.session_state.get("OPENAI_API_KEY", ""),
+            value=os.environ.get("OPENAI_API_KEY", None) or st.session_state.get("OPENAI_API_KEY", ""),
         )
-        model_name = st.selectbox("Select a model:", ["GPT-4", "GPT-3.5-turbo"])
+
         supabase_url = st.text_input(
             "SUPABASE URL",
             type="password",
             placeholder="Paste your SUPABASE URL here",
             help="Vist, https://supabase.com/",
-            value=os.environ.get("SUPABASE_URL", None)
+            value=os.environ.get("SUPABASE_URL", "")
         )
+
         supabase_service_key = st.text_input(
             "SUPABASE SERVICE KEY",
             type="password",
             placeholder="Paste your SUPABASE SERVICE KEY here",
-            value=os.environ.get("SUPABASE_SERVICE_KEY", None)
+            value=os.environ.get("SUPABASE_SERVICE_KEY", "")
         )
+
         st.markdown("---")
         st.markdown(
             "## How to use\n"
@@ -320,18 +292,47 @@ if __name__ == '__main__':
     #  Main page
     st.title("📝 PDF MCQs Generator App")
 
-    if not (openai_api_key and model_name and supabase_url and supabase_service_key):
+    if not (openai_api_key and supabase_url and supabase_service_key):
         st.warning(
             "Enter your API keys in the sidebar."
         )
-
+    else:
+        os.environ["OPENAI_API_KEY"] = openai_api_key
+        os.environ["SUPABASE_URL"] = supabase_url
+        os.environ["SUPABASE_SERVICE_KEY"] = supabase_service_key
 
     # File input
     uploaded_files = None
     custom_prompt1 = "Questions statements should be clear."
     custom_prompt2 = "Give logical explaination of incorrect options."
 
-    if openai_api_key and model_name and supabase_url and supabase_service_key:
+    if os.environ.get("OPENAI_API_KEY", None) and os.environ.get("SUPABASE_URL", None) and os.environ.get("SUPABASE_SERVICE_KEY", None):
+        # Initializing OpenAI embeddings
+        embeddings = OpenAIEmbeddings()
+        supabase_url = os.environ.get("SUPABASE_URL")
+        supabase_key = os.environ.get("SUPABASE_SERVICE_KEY")
+        supabase: Client = create_client(supabase_url, supabase_key)
+
+        vector_store = SupabaseVectorStore(
+            client=supabase,
+            embedding=embeddings,
+            table_name="documents",
+            query_name="match_documents"
+        )
+
+        vector_store_for_qa = SupabaseVectorStore(
+            client=supabase,
+            embedding=embeddings,
+            table_name="question_answers",
+            query_name="match_question_answers"
+        )
+
+        vector_store_for_mcqs = SupabaseVectorStore(
+            client=supabase,
+            embedding=embeddings,
+            table_name="mcqs",
+            query_name="match_mcqs"
+        )
         uploaded_files = st.file_uploader('Choose your .pdf files', type="pdf", accept_multiple_files=True)
         if len(uploaded_files) > 0:
             custom_prompt1 = st.text_input(
@@ -350,10 +351,10 @@ if __name__ == '__main__':
                     doc_splits = split_docs(loaded_documents)
                     if doc_splits:
                         print("Splits: ", len(doc_splits))
-                        store_doc_to_supabase(doc_splits)
+                        store_doc_to_supabase(doc_splits,vector_store)
                         QAs_docs, QAs_List = QA_maker(doc_splits, custom_prompt1)
                         if QAs_docs:
-                            store_qa_to_supabase(QAs_docs)
+                            store_qa_to_supabase(QAs_docs,vector_store_for_qa)
                             if QAs_List:
                                 mcqs = MCQs_Maker(QAs_List[:4],custom_prompt2)
-                                store_mcqs_to_supabase(mcqs)
+                                store_mcqs_to_supabase(mcqs,vector_store_for_mcqs)
