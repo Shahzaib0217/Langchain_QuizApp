@@ -188,12 +188,12 @@ def QA_maker(doc_splits,custom_prompt="None"):
             enhanced_documents = document_transformer.transform_documents(original_documents[:4])
             qa_list=[]
             qa_documents=[]
-            for doc in enhanced_documents:
+            for index, doc in enumerate(enhanced_documents):
                 metadata_qas=doc.metadata["questions_and_answers"]
                 qa_list.extend(metadata_qas)
                 if len(metadata_qas)>0:
                     for qa in metadata_qas:
-                        qa_documents.append(Document(page_content=json.dumps(qa)))
+                        qa_documents.append(Document(page_content=json.dumps(qa),metadata=original_documents[index].metadata))
             output_file = "Questions.json"
             with open(output_file, "w") as f:
                 json.dump(qa_list, f, indent=2)
@@ -333,18 +333,18 @@ if __name__ == '__main__':
 
     if openai_api_key and model_name and supabase_url and supabase_service_key:
         uploaded_files = st.file_uploader('Choose your .pdf files', type="pdf", accept_multiple_files=True)
-        custom_prompt1 = st.text_input(
-            "Enter a prompt for Making Question/Answers",
-            value=custom_prompt1,
-            placeholder="What Kind of QA's you want to make",
-        )
-        custom_prompt2 = st.text_input(
-            "Enter a prompt for Making MCQs",
-            value=custom_prompt2,
-            placeholder="What Kind of MCQs you want to make",
-        )
-        if st.button("Start Making Quiz"):
-            if len(uploaded_files)>0:
+        if len(uploaded_files) > 0:
+            custom_prompt1 = st.text_input(
+                "Enter a prompt for Making Question/Answers",
+                value=custom_prompt1,
+                placeholder="What Kind of QA's you want to make",
+            )
+            custom_prompt2 = st.text_input(
+                "Enter a prompt for Making MCQs",
+                value=custom_prompt2,
+                placeholder="What Kind of MCQs you want to make",
+            )
+            if st.button("Start Making Quiz"):
                 loaded_documents = load_docs(uploaded_files)
                 if loaded_documents:
                     doc_splits = split_docs(loaded_documents)

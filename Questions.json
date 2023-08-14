@@ -1,62 +1,50 @@
 [
   {
-    "question": "What is the official name of India?",
-    "answer": "The official name of India is the Republic of India."
+    "question": "What are some socio-economic challenges that India faces?",
+    "answer": "Poverty, income inequality, and unemployment"
   },
   {
-    "question": "Where is India located?",
-    "answer": "India is located in South Asia."
+    "question": "What efforts are being made to uplift marginalized sections of society in India?",
+    "answer": "Improving education, healthcare, infrastructure, and social welfare programs"
   },
   {
-    "question": "What is India known for?",
-    "answer": "India is known for its cultural heritage, religious diversity, and vast landscapes."
+    "question": "What role does education play in India?",
+    "answer": "It plays a vital role with a strong emphasis on academic excellence"
   },
   {
-    "question": "What are some geographical features of India?",
-    "answer": "India has deserts, plains, mountains, and coastlines."
+    "question": "What fields have Indian professionals made significant contributions in globally?",
+    "answer": "Science, technology, engineering, and mathematics (STEM)"
   },
   {
-    "question": "What is the population of India?",
-    "answer": "India has a population exceeding 1.3 billion people."
+    "question": "What is the Indian film industry popularly known as?",
+    "answer": "Bollywood"
   },
   {
-    "question": "What is the political system of India?",
-    "answer": "India is a federal parliamentary democratic republic."
+    "question": "What does Indian cinema reflect?",
+    "answer": "The diversity and cultural richness of the country"
   },
   {
-    "question": "How many states and union territories does India have?",
-    "answer": "India has 28 states and 9 union territories."
+    "question": "Where does the Indian film industry have a massive following?",
+    "answer": "Both within India and among the Indian diaspora worldwide"
   },
   {
-    "question": "How many states does India have?",
-    "answer": "India has 28 states."
+    "question": "What is Indian cinema known for?",
+    "answer": "Indian cinema is known for its diversity and cultural richness."
   },
   {
-    "question": "How many union territories does India have?",
-    "answer": "India has 9 union territories."
+    "question": "What is Indian cuisine renowned for?",
+    "answer": "Indian cuisine is renowned for its flavors, spices, and regional specialties."
   },
   {
-    "question": "What religions are practiced in India?",
-    "answer": "Hinduism, Islam, Christianity, Sikhism, Buddhism, Jainism, among others."
+    "question": "What is the official currency of India?",
+    "answer": "The official currency of India is the Indian rupee."
   },
   {
-    "question": "How do different religions coexist in India?",
-    "answer": "Different religions coexist harmoniously, contributing to India's multicultural fabric."
+    "question": "What is the currency symbol for the Indian rupee?",
+    "answer": "The currency symbol for the Indian rupee is \u20b9."
   },
   {
-    "question": "What are some festivals celebrated in India?",
-    "answer": "Diwali, Eid, Christmas, Holi, among others."
-  },
-  {
-    "question": "What is the history of India characterized by?",
-    "answer": "The history of India is characterized by ancient civilizations, invasions, and the establishment of powerful empires."
-  },
-  {
-    "question": "Which ancient civilization flourished in the northwestern part of the Indian subcontinent?",
-    "answer": "The Indus Valley Civilization."
-  },
-  {
-    "question": "What are some of the dynasties that ruled India?",
-    "answer": "Maurya, Gupta, among others."
+    "question": "What is a significant contributor to India's economy?",
+    "answer": "Tourism is a significant contributor to India's economy."
   }
 ]
