@@ -1,13 +1,11 @@
 import streamlit as st
 import os
 import json
-import asyncio
-from langchain.document_loaders import PyPDFDirectoryLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import SupabaseVectorStore
 from supabase.client import Client, create_client
+from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_transformers import DoctranQATransformer
 from langchain.schema import Document
 from langchain.chat_models import ChatOpenAI
 from langchain.document_transformers.openai_functions import create_metadata_tagger
@@ -16,15 +14,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Setting environment variables
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
-os.environ["OPENAI_API_MODEL"] = os.getenv("OPENAI_API_MODEL")
 supabase_url = os.environ.get("SUPABASE_URL")
 supabase_key = os.environ.get("SUPABASE_SERVICE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
 
+
+
+
 # Function to read documents from a directory
-def load_docs(directory):
+def load_docs(pdfs):
     """
     Load PDF documents from a directory.
 
@@ -37,8 +36,13 @@ def load_docs(directory):
     with st.spinner("Loading Documents... Please wait."):
         print("Starting Documents loading ....")
         try:
-            loader = PyPDFDirectoryLoader(directory)
-            documents = loader.load()
+            documents=[]
+            for pdf in pdfs:
+                reader = PdfReader(pdf)
+                i = 1
+                for page in reader.pages:
+                    documents.append(Document(page_content=page.extract_text(), metadata={'page': i,"source":pdf.name}))
+                    i += 1
             print("Documents Loaded Successfully!")
             st.success("Documents loading completed!")
             return documents
@@ -83,11 +87,13 @@ def split_docs(documents, chunk_size=1000, chunk_overlap=200):
 
 # Function to store document chunks to Supabase
 def store_doc_to_supabase(doc_splits):
-    try:
-        print("Storing Documents to SupaBase")
-        vector_store.add_documents(doc_splits)
-    except Exception as e:
-        pass
+    with st.spinner("Storing Documents to Database... Please wait."):
+        try:
+            print("Storing Documents to SupaBase")
+            vector_store.add_documents(doc_splits)
+        except Exception as e:
+            pass
+
 
 
 # Initializing OpenAI embeddings
@@ -116,119 +122,159 @@ vector_store_for_mcqs = SupabaseVectorStore(
 )
 
 def store_qa_to_supabase(doc_splits):
-    try:
-        print("Storing Questions Answers to SupaBase")
-        vector_store_for_qa.add_documents(doc_splits)
-    except Exception as e:
-        pass
-def store_mcqs_to_supabase(doc_splits):
-    try:
-        print("Storing MCQS to SupaBase")
-        vector_store_for_mcqs.add_documents(doc_splits)
-    except Exception as e:
-        pass
+    with st.spinner("Storing Q/As in database... Please wait."):
+        try:
+            print("Storing Questions Answers to SupaBase")
+            vector_store_for_qa.add_documents(doc_splits)
+        except Exception as e:
+            pass
 
-# Initializing QA transformer
-qa_transformer = DoctranQATransformer()
+def store_mcqs_to_supabase(doc_splits):
+    with st.spinner("Storing MCQs in database... Please wait."):
+        try:
+            print("Storing MCQS to SupaBase")
+            vector_store_for_mcqs.add_documents(doc_splits)
+        except Exception as e:
+            pass
+        st.success("MCQs have been saved in database")
+
+
 
 
 # Function to create questions and answers using GPT
-async def QA_maker(doc_splits):
-    # try:
-        print("Starting making Questions Answer ....")
-        custom_prompt = """
-        Please Add questions about india
-        """
-        transformed_document = await qa_transformer.atransform_documents(doc_splits,prompt=custom_prompt)
-        qa_list = []
-        qa_documents=[]
-        for doc in transformed_document:
-            metadata_qas=doc.metadata["questions_and_answers"]
-            source=doc.metadata["source"]
-            page=doc.metadata["page"]
-            for qa in metadata_qas:
-                qa_documents.append(Document(page_content=json.dumps(qa),metadata={"source":source,"page":page}))
+def QA_maker(doc_splits,custom_prompt="None"):
+    with st.spinner("Making Q/As... Please wait."):
+        try:
+            print("Starting making Questions Answer ....")
+            schema = {
+                "properties": {
+                    "questions_and_answers":{
+                        "type": "array",
+                        "description": "A List in of JSON of All the Question Answers that can be from given content",
+                            "items": {
+                                "type": "object",
+                                "properties":{
+                                    "question":{
+                                        "type":"string",
+                                        "description":"The statement of the generated Question."
+                                    },
+                                    "answer":{
+                                        "type":"string",
+                                        "description":"The answer of the generated question."
+                                    }
+                                },
+                                "required":["question","answer"]
+                            },
 
-        for doc in transformed_document:
-            qa_list.extend(doc.metadata["questions_and_answers"])
-        output_file = "Questions.json"
-        with open(output_file, "w") as f:
-            json.dump(qa_list, f, indent=2)
-        print(f"Questions saved to {output_file}")
-        print("Question Answer have been created!")
-        return qa_documents,qa_list
-    # except Exception as e:
-        print("Some error occured during making questions",e)
+                        }
 
+                },
+                "required": ["questions_and_answers"]
+            }
+
+
+            original_documents = []
+            for doc_it in doc_splits:
+                original_documents.append(Document(page_content=
+                                                   f"Context\n:```{doc_it.page_content}```\n"
+                                                   f"You have to make all the Questions and Answers from this context\n"
+                                                   f"(These Questions Answers will be convert in the MCQs in future but not now)\n"
+                                                   f"Please strictly follow the instructions given below for making Questions and Answers(which questions you will make and which question you will skip)\n"
+                                                   f"INSTRUCTIONS:```{custom_prompt}```"
+                                                   ))
+
+            llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
+            document_transformer = create_metadata_tagger(metadata_schema=schema, llm=llm)
+            enhanced_documents = document_transformer.transform_documents(original_documents[:4])
+            qa_list=[]
+            qa_documents=[]
+            for doc in enhanced_documents:
+                metadata_qas=doc.metadata["questions_and_answers"]
+                qa_list.extend(metadata_qas)
+                if len(metadata_qas)>0:
+                    for qa in metadata_qas:
+                        qa_documents.append(Document(page_content=json.dumps(qa)))
+            output_file = "Questions.json"
+            with open(output_file, "w") as f:
+                json.dump(qa_list, f, indent=2)
+            print(f"Questions saved to {output_file}")
+            print("Question Answer have been created!")
+            st.success("Q/As have been created!")
+            return qa_documents,qa_list
+        except Exception as e:
+            print("Some error occurred during making questions",e)
+            st.error("Q/As making failed!")
+            return [],[]
 
 # Function to create MCQs based on questions and answers
-def MCQs_Maker(QAs):
-    try:
-        print("Starting Making MCQS")
-        schema = {
-            "properties": {
-                "Question_Statement": {
-                    "type":"string",
-                    "description": "The Question Statement for MCQ",
-                                },
-                "Correct_Option": {
-                    "type": "string",
-                    "description":"The correct option based on the context."
+def MCQs_Maker(QAs,custom_prompt="None"):
+    with st.spinner("Making MCQs... Please wait."):
+        try:
+            print("Starting Making MCQS")
+            schema = {
+                "properties": {
+                    "Question_Statement": {
+                        "type":"string",
+                        "description": "The Question Statement for MCQ",
+                                    },
+                    "Correct_Option": {
+                        "type": "string",
+                        "description":"The correct option based on the context."
 
-                },
-                "Incorrect_Option1": {
-                    "type": "string",
-                    "description": "Incorrect Option"
+                    },
+                    "Incorrect_Option1": {
+                        "type": "string",
+                        "description": "Incorrect Option"
 
-                },
-                "Explain_Incorrect1": {
-                    "type": "string",
-                    "description": "Why Incorrect_Option1 is wrong choice for this question"
-                },
-                "Incorrect_Option2": {
-                    "type": "string",
-                    "description": "Incorrect Option"
+                    },
+                    "Explain_Incorrect1": {
+                        "type": "string",
+                        "description": "Why Incorrect_Option1 is wrong choice for this question"
+                    },
+                    "Incorrect_Option2": {
+                        "type": "string",
+                        "description": "Incorrect Option"
 
+                    },
+                    "Explain_Incorrect2": {
+                        "type": "string",
+                        "description": "Why Incorrect_Option2 is wrong choice for this question."
+                    },
+                    "Incorrect_Option3": {
+                        "type": "string",
+                        "description": "Incorrect Option"
+                    },
+                    "Explain_Incorrect3":{
+                        "type":"string",
+                        "description":"Why Incorrect_Option3 is wrong choice for this question."
+                    }
                 },
-                "Explain_Incorrect2": {
-                    "type": "string",
-                    "description": "Why Incorrect_Option2 is wrong choice for this question."
-                },
-                "Incorrect_Option3": {
-                    "type": "string",
-                    "description": "Incorrect Option"
+                "required": ["Question_Statement","Correct_Option","Incorrect_Option1","Incorrect_Option2",
+                             "Incorrect_Option3","Explain_Incorrect1","Explain_Incorrect2","Explain_Incorrect3"],
+            }
+            original_documents=[]
+            for qa in QAs:
+                original_documents.append(Document(page_content=
+                f"Context\nQuestion:{qa['question']}\nAnswer:{qa['answer']}\n"
+                f"You have to make MCQ question and its option using this context\n"
+                f"Make sure there should be one Correct option and three incorrect options\n"
+                f"The incorrect options should not be confusing mean not that much relevant to right answer\n"
+                f"Strictly follow the instructions given below for making mcqs\n"
+                f"Instructions:```{custom_prompt}```"
+                ))
+            # Must be an OpenAI model that supports functions
+            llm = ChatOpenAI(temperature=1, model="gpt-3.5-turbo-0613")
+            document_transformer = create_metadata_tagger(metadata_schema=schema, llm=llm)
+            enhanced_documents = document_transformer.transform_documents(original_documents)
+            MCQ_list=[]
+            for doc in enhanced_documents:
+                MCQ_list.append(Document(page_content=doc.metadata["Question_Statement"],metadata=doc.metadata))
+            st.success("MCQs have been created!")
+            return MCQ_list
+        except Exception as e:
+            st.error("MCQs creation Failed!")
+            print("Some Error occurred during Making MCQS",e)
 
-                },
-                "Explain_Incorrect3":{
-                    "type":"string",
-                    "description":"Why Incorrect_Option3 is wrong choice for this question."
-                }
-            },
-            "required": ["Question_Statement","Correct_Option","Incorrect_Option1","Incorrect_Option2",
-                         "Incorrect_Option3","Explain_Incorrect1","Explain_Incorrect2","Explain_Incorrect3"],
-        }
-        original_documents=[]
-        for qa in QAs:
-            original_documents.append(Document(page_content=
-            f"Context\nQuestion:{qa['question']}\nAnswer:{qa['answer']}\n"
-            f"You have to make MCQ question and its option using this context\n"
-            f"Make sure there should be one Correct option and three incorrect options\n"
-            f"The incorrect options should not be confusing mean not that much relevant to right answer\n"
-            ))
-        # Must be an OpenAI model that supports functions
-        llm = ChatOpenAI(temperature=1, model="gpt-3.5-turbo-0613")
-        document_transformer = create_metadata_tagger(metadata_schema=schema, llm=llm)
-        enhanced_documents = document_transformer.transform_documents(original_documents)
-        metadata_list=[]
-        MCQ_list=[]
-        for doc in enhanced_documents:
-            MCQ_list.append(Document(page_content=doc.metadata["Question_Statement"],metadata=doc.metadata))
-            metadata_list.append(doc.metadata)
-        with open('MCQS.json', 'w') as json_file:
-            json.dump(metadata_list, json_file, indent=4)
-        return MCQ_list
-    except Exception as e:
-        print("Some Error occurred during Making MCQS",e)
 
 
 if __name__ == '__main__':
@@ -269,6 +315,8 @@ if __name__ == '__main__':
         "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
         "[View the source code](https://github.com/streamlit/llm-examples/blob/main/Chatbot.py)"
 
+
+
     #  Main page
     st.title("📝 PDF MCQs Generator App")
 
@@ -276,49 +324,36 @@ if __name__ == '__main__':
         st.warning(
             "Enter your API keys in the sidebar."
         )
+
+
     # File input
     uploaded_files = None
+    custom_prompt1 = "Questions statements should be clear."
+    custom_prompt2 = "Give logical explaination of incorrect options."
+
     if openai_api_key and model_name and supabase_url and supabase_service_key:
         uploaded_files = st.file_uploader('Choose your .pdf files', type="pdf", accept_multiple_files=True)
-
-    # ------- Function Calls ----------
-    # if st.button("Show Loading Spinner"):
-    #     # Display the loading spinner and a message
-    #     with st.spinner("Loading... Please wait."):
-    #         # Simulate a time-consuming task
-    #         time.sleep(3)
-    #     # Once the task is complete, clear the loading spinner
-    #     st.success("Task completed!")
-    if uploaded_files is not None:
-        upload_dir = "Docs"
-        for uploaded_file in uploaded_files:
-            # Create a directory to store uploaded files
-            os.makedirs(upload_dir, exist_ok=True)
-            # Get the filename
-            filename = os.path.join(upload_dir, uploaded_file.name)
-            # Save the uploaded file to the specified directory
-            with open(filename, 'wb') as f:
-                f.write(uploaded_file.read())
-            st.success(f"File '{uploaded_file.name}' uploaded and stored at: {filename}")
-
-        custom_prompt = st.text_input(
-            "Enter a prompt to customize quiz",
-            placeholder="What kind of quiz would you like to make?",
-            disabled=not uploaded_files,
+        custom_prompt1 = st.text_input(
+            "Enter a prompt for Making Question/Answers",
+            value=custom_prompt1,
+            placeholder="What Kind of QA's you want to make",
         )
-
-
-        # Loading Docs
-        # loaded_documents = load_docs(upload_dir)
-        # doc_splits = split_docs(loaded_documents)
-        # # print("Splits: ",len(doc_splits))
-        #
-        # store_doc_to_supabase(doc_splits)
-        # QAs_docs,QAs_List=asyncio.run(QA_maker(doc_splits[:2]))
-        # store_qa_to_supabase(QAs_docs)
-        #
-        # # Making Mcqs
-        # mcqs=MCQs_Maker(QAs_List[:2])
-        # store_mcqs_to_supabase(mcqs)
-
-        # print("MileStone1 completed :)")
+        custom_prompt2 = st.text_input(
+            "Enter a prompt for Making MCQs",
+            value=custom_prompt2,
+            placeholder="What Kind of MCQs you want to make",
+        )
+        if st.button("Start Making Quiz"):
+            if len(uploaded_files)>0:
+                loaded_documents = load_docs(uploaded_files)
+                if loaded_documents:
+                    doc_splits = split_docs(loaded_documents)
+                    if doc_splits:
+                        print("Splits: ", len(doc_splits))
+                        store_doc_to_supabase(doc_splits)
+                        QAs_docs, QAs_List = QA_maker(doc_splits, custom_prompt1)
+                        if QAs_docs:
+                            store_qa_to_supabase(QAs_docs)
+                            if QAs_List:
+                                mcqs = MCQs_Maker(QAs_List[:4],custom_prompt2)
+                                store_mcqs_to_supabase(mcqs)
