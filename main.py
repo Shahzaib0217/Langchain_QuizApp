@@ -332,80 +332,113 @@ if __name__ == '__main__':
             table_name="mcqs",
             query_name="match_mcqs"
         )
-        uploaded_files = st.file_uploader('Choose your .pdf files', type="pdf", accept_multiple_files=True)
-        if len(uploaded_files) > 0 and "Mcqs" not in st.session_state:
-            custom_prompt1 = st.text_input(
-                "Enter a prompt for Making Question/Answers",
-                value=custom_prompt1,
-                placeholder="What Kind of QA's you want to make",
-            )
-            custom_prompt2 = st.text_input(
-                "Enter a prompt for Making MCQs",
-                value=custom_prompt2,
-                placeholder="What Kind of MCQs you want to make",
-            )
-            if st.button("Start Making Quiz"):
-                loaded_documents = load_docs(uploaded_files)
-                if loaded_documents:
-                    doc_splits = split_docs(loaded_documents)
-                    if doc_splits:
-                        print("Splits: ", len(doc_splits))
-                        store_doc_to_supabase(doc_splits,vector_store)
-                        QAs_docs, QAs_List = QA_maker(doc_splits, custom_prompt1)
-                        if QAs_docs:
-                            store_qa_to_supabase(QAs_docs,vector_store_for_qa)
-                            if QAs_List:
-                                mcqs = MCQs_Maker(QAs_List[:4],custom_prompt2)
-                                store_mcqs_to_supabase(mcqs,vector_store_for_mcqs)
-                                if "Mcqs" in st.session_state:
-                                    st.session_state["Mcqs"].extend(mcqs)
-                                    st.experimental_rerun()
-                                else:
-                                    st.session_state["Mcqs"] = mcqs
-                                    st.experimental_rerun()
-
-        if "Related" in st.session_state:
-            colms = st.columns((2, 2, 1, 1))
-            fields = ["Question", 'Answer', "", ""]
-            for col, field_name in zip(colms, fields):
-                # header
-                col.write(field_name)
+        if "Mcqs" not in st.session_state and "Related" not in st.session_state and "AskQuestion" not in st.session_state:
+            uploaded_files = st.file_uploader('Choose your .pdf files', type="pdf", accept_multiple_files=True)
+            if len(uploaded_files) > 0 and "Mcqs" not in st.session_state:
+                custom_prompt1 = st.text_input(
+                    "Enter a prompt for Making Question/Answers",
+                    value=custom_prompt1,
+                    placeholder="What Kind of QA's you want to make",
+                )
+                custom_prompt2 = st.text_input(
+                    "Enter a prompt for Making MCQs",
+                    value=custom_prompt2,
+                    placeholder="What Kind of MCQs you want to make",
+                )
+                if st.button("Start Making Quiz"):
+                    loaded_documents = load_docs(uploaded_files)
+                    if loaded_documents:
+                        doc_splits = split_docs(loaded_documents)
+                        if doc_splits:
+                            print("Splits: ", len(doc_splits))
+                            store_doc_to_supabase(doc_splits,vector_store)
+                            QAs_docs, QAs_List = QA_maker(doc_splits, custom_prompt1)
+                            if QAs_docs:
+                                store_qa_to_supabase(QAs_docs,vector_store_for_qa)
+                                if QAs_List:
+                                    mcqs = MCQs_Maker(QAs_List[:4],custom_prompt2)
+                                    store_mcqs_to_supabase(mcqs,vector_store_for_mcqs)
+                                    if "Mcqs" in st.session_state:
+                                        st.session_state["Mcqs"].extend(mcqs)
+                                        st.experimental_rerun()
+                                    else:
+                                        st.session_state["Mcqs"] = mcqs
+                                        st.experimental_rerun()
+        if "AskQuestion" in st.session_state:
             st.write("---")
+            st.header("Ask Questions")
+            st.write("---")
+            st.subheader("Question")
+            st.write(st.session_state["AskQuestion"]["question"])
+            st.write("---")
+            st.subheader("Answer")
+            st.write(st.session_state["AskQuestion"]["answer"])
+            st.write("---")
+            st.subheader("Query")
+            prompt=""
 
-            for x, m in enumerate(st.session_state["Related"]):
-                mcq = m.metadata
-                col1, col2, col3, col4 = st.columns((2, 2, 1, 1))
-                col1.write(mcq["Question_Statement"])  # index
-                col2.write(mcq["Correct_Option"])  # email
-                button_type = "Related"
-                button_phold = col3.empty()
-                button_phold1 = col4.empty()
-                if button_phold.button(button_type,key=x, type="primary"):
-                    st.session_state["Related"]=vector_store_for_mcqs.similarity_search(m.page_content,2)
-                    st.experimental_rerun()
-                button_phold1.button("Ask Question",key=str(x)+"_",  type="primary")
-                st.write("---")
-            if st.button("Show All"):
-                del st.session_state["Related"]
+            prompt=st.text_input(
+                "Ask about the seleted Question",
+                value=prompt,
+                placeholder="Query",
+            )
+
+
+            if st.button("Back"):
+                del st.session_state["AskQuestion"]
                 st.experimental_rerun()
         else:
-            if "Mcqs" in st.session_state and "Related" not in st.session_state :
-                colms = st.columns((2, 2,1,1))
-                fields = ["Question", 'Answer',"",""]
+            if "Related" in st.session_state:
+                st.write("---")
+                st.subheader("Related Questions")
+                colms = st.columns((2, 2, 1, 1))
+                fields = ["Question", 'Answer', "", ""]
                 for col, field_name in zip(colms, fields):
                     # header
-                    col.write(field_name)
+                    col.header(field_name)
                 st.write("---")
-                for x, m in enumerate(st.session_state["Mcqs"]):
-                    mcq=m.metadata
-                    col1, col2,col3,col4 = st.columns((2, 2, 1,1))
+
+                for x, m in enumerate(st.session_state["Related"]):
+                    mcq = m.metadata
+                    col1, col2, col3, col4 = st.columns((2, 2, 1, 1))
                     col1.write(mcq["Question_Statement"])  # index
                     col2.write(mcq["Correct_Option"])  # email
                     button_type = "Related"
                     button_phold = col3.empty()
                     button_phold1 = col4.empty()
-                    if button_phold.button(button_type,key=x,type="primary"):
-                        st.session_state["Related"] = vector_store_for_mcqs.similarity_search(m.page_content, 2)
+                    if button_phold.button(button_type,key=x, type="primary"):
+                        st.session_state["Related"]=vector_store_for_mcqs.similarity_search(m.page_content,2)
                         st.experimental_rerun()
-                    button_phold1.button("Ask Question",key=str(x)+"_",type="primary")
+                    if button_phold1.button("Ask Question", key=str(x) + "_", type="primary"):
+                        st.session_state["AskQuestion"] = {"question": mcq["Question_Statement"],
+                                                           "answer": mcq["Correct_Option"]}
+                        st.experimental_rerun()
                     st.write("---")
+                if st.button("Show All"):
+                    del st.session_state["Related"]
+                    st.experimental_rerun()
+            else:
+                if "Mcqs" in st.session_state and "Related" not in st.session_state :
+                    st.write("---")
+                    st.subheader("All Questions")
+                    colms = st.columns((2, 2,1,1))
+                    fields = ["Question", 'Answer',"",""]
+                    for col, field_name in zip(colms, fields):
+                        # header
+                        col.header(field_name)
+                    st.write("---")
+                    for x, m in enumerate(st.session_state["Mcqs"]):
+                        mcq=m.metadata
+                        col1, col2,col3,col4 = st.columns((2, 2, 1,1))
+                        col1.write(mcq["Question_Statement"])  # index
+                        col2.write(mcq["Correct_Option"])  # email
+                        button_type = "Related"
+                        button_phold = col3.empty()
+                        button_phold1 = col4.empty()
+                        if button_phold.button(button_type,key=x,type="primary"):
+                            st.session_state["Related"] = vector_store_for_mcqs.similarity_search(m.page_content, 2)
+                            st.experimental_rerun()
+                        if button_phold1.button("Ask Question",key=str(x)+"_",type="primary"):
+                            st.session_state["AskQuestion"]={"question":mcq["Question_Statement"],"answer":mcq["Correct_Option"]}
+                            st.experimental_rerun()
+                        st.write("---")

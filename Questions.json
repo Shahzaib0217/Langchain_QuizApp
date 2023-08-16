@@ -1,90 +1,50 @@
 [
   {
-    "question": "What is the official name of India?",
-    "answer": "Republic of India"
+    "question": "What are some socio-economic challenges that India faces?",
+    "answer": "Poverty, income inequality, and unemployment"
   },
   {
-    "question": "Where is India located?",
-    "answer": "South Asia"
+    "question": "What efforts are being made to uplift marginalized sections of society in India?",
+    "answer": "Improving education, healthcare, infrastructure, and social welfare programs"
   },
   {
-    "question": "What is India known for?",
-    "answer": "Cultural heritage, religious diversity, and vast landscapes"
+    "question": "What role does education play in India?",
+    "answer": "It plays a vital role with a strong emphasis on academic excellence"
   },
   {
-    "question": "What are some geographical features of India?",
-    "answer": "Deserts, plains, mountains, and coastlines"
+    "question": "What fields have Indian professionals made significant contributions in globally?",
+    "answer": "Science, technology, engineering, and mathematics (STEM)"
   },
   {
-    "question": "What is the land area of India?",
-    "answer": "Seventh-largest country by land area"
+    "question": "What is the Indian film industry popularly known as?",
+    "answer": "Bollywood"
   },
   {
-    "question": "What is the population of India?",
-    "answer": "Exceeding 1.3 billion people"
+    "question": "What does Indian cinema reflect?",
+    "answer": "The diversity and cultural richness of the country"
   },
   {
-    "question": "What type of government does India have?",
-    "answer": "Federal parliamentary democratic republic"
+    "question": "Where does the Indian film industry have a massive following?",
+    "answer": "Both within India and among the Indian diaspora worldwide"
   },
   {
-    "question": "Who is the head of state in India?",
-    "answer": "President"
+    "question": "What is Indian cinema known for?",
+    "answer": "Indian cinema is known for its diversity and cultural richness."
   },
   {
-    "question": "Who is the head of government in India?",
-    "answer": "Prime Minister"
+    "question": "What is Indian cuisine renowned for?",
+    "answer": "Indian cuisine is renowned for its flavors, spices, and regional specialties."
   },
   {
-    "question": "How many states and union territories does India have?",
-    "answer": "28 states and 9 union territories"
+    "question": "What is the official currency of India?",
+    "answer": "The official currency of India is the Indian rupee."
   },
   {
-    "question": "What is the administrative structure of India?",
-    "answer": "multi-tiered administrative structure with 28 states and 9 union territories"
+    "question": "What is the currency symbol for the Indian rupee?",
+    "answer": "The currency symbol for the Indian rupee is \u20b9."
   },
   {
-    "question": "What religions are practiced in India?",
-    "answer": "Hinduism, Islam, Christianity, Sikhism, Buddhism, Jainism"
-  },
-  {
-    "question": "What festivals are celebrated in India?",
-    "answer": "Diwali, Eid, Christmas, Holi"
-  },
-  {
-    "question": "What is the history of India characterized by?",
-    "answer": "ancient civilizations, invasions, establishment of powerful empires"
-  },
-  {
-    "question": "Which civilization flourished in the northwestern part of the Indian subcontinent?",
-    "answer": "Indus Valley Civilization"
-  },
-  {
-    "question": "Which dynasties rose and fell in India?",
-    "answer": "Maurya, Gupta"
-  },
-  {
-    "question": "When did India gain independence from British colonial rule?",
-    "answer": "August 15, 1947"
-  },
-  {
-    "question": "What is celebrated annually on August 15th in India?",
-    "answer": "Independence Day"
-  },
-  {
-    "question": "What are some major sectors of India's economy?",
-    "answer": "software and information technology services, pharmaceuticals, textiles, agriculture, and manufacturing"
-  },
-  {
-    "question": "What are the major sectors in India?",
-    "answer": "software and information technology services, pharmaceuticals, textiles, agriculture, and manufacturing sectors"
-  },
-  {
-    "question": "Which cities are hubs of business and commerce in India?",
-    "answer": "Mumbai, Delhi, Bangalore, and Chennai"
-  },
-  {
-    "question": "What is the capital of India?",
-    "answer": "Delhi"
+    "question": "What is a significant contributor to India's economy?",
+    "answer": "Tourism is a significant contributor to India's economy."
   }
 ]
