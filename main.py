@@ -10,6 +10,9 @@ from langchain.schema import Document
 from langchain.chat_models import ChatOpenAI
 from langchain.document_transformers.openai_functions import create_metadata_tagger
 from dotenv import load_dotenv
+from langchain.prompts import PromptTemplate
+from langchain.chains import RetrievalQA
+from langchain.chat_models import ChatOpenAI
 
 load_dotenv()
 
@@ -326,6 +329,7 @@ if __name__ == '__main__':
             query_name="match_question_answers"
         )
 
+
         vector_store_for_mcqs = SupabaseVectorStore(
             client=supabase,
             embedding=embeddings,
@@ -377,16 +381,35 @@ if __name__ == '__main__':
             st.subheader("Query")
             prompt=""
 
-            prompt=st.text_input(
+            question=st.text_input(
                 "Ask about the seleted Question",
                 value=prompt,
                 placeholder="Query",
             )
-
+            answer=""
+            if question:
+                llm = ChatOpenAI(model_name="gpt-3.5-turbo-0613", temperature=0.7)
+                qa_chain = RetrievalQA.from_chain_type(
+                    llm,
+                    retriever=vector_store.as_retriever()
+                )
+                result = qa_chain({"query":
+                                    f"'''Question:{st.session_state['AskQuestion']['question']}\n"
+                                    f"Answer:{st.session_state['AskQuestion']['answer']}'''\n"
+                                   f"This question answer was made from the documents\n"
+                                   f"On the base of above question and answer retrieve documents form retriever to make a context\n"
+                                   f"I want to ask some some query about this created question"
+                                   f"My query is '''{question}'''"
+                                   f"Please give answer of this query"
+                                   })
+                answer=result["result"]
+            if answer:
+                st.write(answer)
 
             if st.button("Back"):
                 del st.session_state["AskQuestion"]
                 st.experimental_rerun()
+
         else:
             if "Related" in st.session_state:
                 st.write("---")
