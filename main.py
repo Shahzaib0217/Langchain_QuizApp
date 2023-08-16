@@ -249,51 +249,7 @@ def MCQs_Maker(QAs,custom_prompt="None"):
 
 
 if __name__ == '__main__':
-    # ---- Streamlit code --------
-    # Side Bar
-    # st.session_state["Mcqs"]=[
-    #     {
-    #         "Correct_Option": "Questions statements should be clear.",
-    #         "Incorrect_Option1": "Give logical explaination of incorrect options.",
-    #         "Incorrect_Option2": "Make sure there should be one Correct option and three incorrect options.",
-    #         "Incorrect_Option3": "The incorrect options should not be confusing mean not that much relevant to the right answer.",
-    #         "Explain_Incorrect1": "This is the instruction for explaining the incorrect options.",
-    #         "Explain_Incorrect2": "This is the instruction for the number of options.",
-    #         "Explain_Incorrect3": "This is the instruction for the relevance of incorrect options.",
-    #         "Question_Statement": "What are the instructions for making questions and answers?"
-    #     },
-    #     {
-    #         "Correct_Option": "Questions statements should be clear.",
-    #         "Incorrect_Option1": "Give logical explaination of incorrect options.",
-    #         "Incorrect_Option2": "Make sure there should be one Correct option and three incorrect options.",
-    #         "Incorrect_Option3": "The incorrect options should not be confusing mean not that much relevant to the right answer.",
-    #         "Explain_Incorrect1": "This is the instruction for explaining the incorrect options.",
-    #         "Explain_Incorrect2": "This is the instruction for the number of options.",
-    #         "Explain_Incorrect3": "This is the instruction for the relevance of incorrect options.",
-    #         "Question_Statement": "What are the instructions for making questions and answers?"
-    #     },
-    #     {
-    #         "Correct_Option": "Speciﬁes all the sentences in a language that are well formed.",
-    #         "Incorrect_Option1": "Specifies the syntax of a language.",
-    #         "Incorrect_Option2": "Refers to the study of word origins and histories.",
-    #         "Incorrect_Option3": "Refers to the study of how sentences are pronounced.",
-    #         "Explain_Incorrect1": "Syntax refers to the structure and arrangement of words in a language, while semantics deals with the meaning and interpretation of those words. Therefore, specifying the syntax of a language is not the same as specifying all the well-formed sentences.",
-    #         "Explain_Incorrect2": "Etymology is the study of word origins and histories, not semantics. Semantics is concerned with the meaning and interpretation of words and sentences in a language.",
-    #         "Explain_Incorrect3": "Phonetics and phonology deal with the study of how sentences are pronounced, not semantics. Semantics focuses on the meaning and interpretation of sentences.",
-    #         "Question_Statement": "What is I Semantics?"
-    #     },
-    #     {
-    #         "Correct_Option": "Speciﬁes all the sentences in a language that are well formed.",
-    #         "Incorrect_Option1": "Specifies the syntax of a language.",
-    #         "Incorrect_Option2": "Refers to the study of word origins and histories.",
-    #         "Incorrect_Option3": "Refers to the study of how sentences are pronounced.",
-    #         "Explain_Incorrect1": "Syntax refers to the structure and arrangement of words in a language, while semantics deals with the meaning and interpretation of those words. Therefore, specifying the syntax of a language is not the same as specifying all the well-formed sentences.",
-    #         "Explain_Incorrect2": "Etymology is the study of word origins and histories, not semantics. Semantics is concerned with the meaning and interpretation of words and sentences in a language.",
-    #         "Explain_Incorrect3": "Phonetics and phonology deal with the study of how sentences are pronounced, not semantics. Semantics focuses on the meaning and interpretation of sentences.",
-    #         "Question_Statement": "What is I Semantics?"
-    #     }
-    # ]
-    key_val=0
+
     with st.sidebar:
         st.title("📝 PDF MCQs Generator App")
         openai_api_key = st.text_input(
@@ -346,7 +302,6 @@ if __name__ == '__main__':
 
     # File input
     uploaded_files = None
-    switch_flag=True
     custom_prompt1 = "Questions statements should be clear."
     custom_prompt2 = "Give logical explaination of incorrect options."
 
@@ -404,9 +359,12 @@ if __name__ == '__main__':
                                 store_mcqs_to_supabase(mcqs,vector_store_for_mcqs)
                                 if "Mcqs" in st.session_state:
                                     st.session_state["Mcqs"].extend(mcqs)
+                                    st.experimental_rerun()
                                 else:
                                     st.session_state["Mcqs"] = mcqs
-        if switch_flag and "Related" in st.session_state:
+                                    st.experimental_rerun()
+
+        if "Related" in st.session_state:
             colms = st.columns((2, 2, 1, 1))
             fields = ["Question", 'Answer', "", ""]
             for col, field_name in zip(colms, fields):
@@ -422,17 +380,16 @@ if __name__ == '__main__':
                 button_type = "Related"
                 button_phold = col3.empty()
                 button_phold1 = col4.empty()
-                key_val+=1
-                if button_phold.button(button_type,key=key_val, type="primary"):
+                if button_phold.button(button_type,key=x, type="primary"):
                     st.session_state["Related"]=vector_store_for_mcqs.similarity_search(m.page_content,2)
-                key_val+=1
-                button_phold1.button("Ask Question",key=key_val,  type="primary")
+                    st.experimental_rerun()
+                button_phold1.button("Ask Question",key=str(x)+"_",  type="primary")
                 st.write("---")
             if st.button("Show All"):
-                switch_flag=not switch_flag
                 del st.session_state["Related"]
+                st.experimental_rerun()
         else:
-            if "Mcqs" in st.session_state :
+            if "Mcqs" in st.session_state and "Related" not in st.session_state :
                 colms = st.columns((2, 2,1,1))
                 fields = ["Question", 'Answer',"",""]
                 for col, field_name in zip(colms, fields):
@@ -447,10 +404,8 @@ if __name__ == '__main__':
                     button_type = "Related"
                     button_phold = col3.empty()
                     button_phold1 = col4.empty()
-                    key_val+=1
-                    if button_phold.button(button_type,key=key_val,type="primary"):
-                        switch_flag=not switch_flag
+                    if button_phold.button(button_type,key=x,type="primary"):
                         st.session_state["Related"] = vector_store_for_mcqs.similarity_search(m.page_content, 2)
-                    key_val+=1
-                    button_phold1.button("Ask Question",key=key_val,type="primary")
+                        st.experimental_rerun()
+                    button_phold1.button("Ask Question",key=str(x)+"_",type="primary")
                     st.write("---")
