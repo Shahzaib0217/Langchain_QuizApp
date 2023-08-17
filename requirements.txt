@@ -3,3 +3,4 @@ langchain
 supabase
 pypdf2
 python-dotenv
+openai
