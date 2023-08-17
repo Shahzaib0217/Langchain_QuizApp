@@ -310,10 +310,8 @@ if __name__ == '__main__':
 
     if api_key and supabase_url and supabase_service_key:
         # Initializing OpenAI embeddings
-        embeddings = OpenAIEmbeddings()
-        supabase_url = os.environ.get("SUPABASE_URL")
-        supabase_key = os.environ.get("SUPABASE_SERVICE_KEY")
-        supabase: Client = create_client(supabase_url, supabase_key)
+        embeddings = OpenAIEmbeddings(openai_api_key=api_key)
+        supabase: Client = create_client(supabase_url, supabase_service_key)
 
         vector_store = SupabaseVectorStore(
             client=supabase,
