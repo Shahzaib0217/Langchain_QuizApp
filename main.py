@@ -116,7 +116,7 @@ def store_mcqs_to_supabase(doc_splits,vector_store_for_mcqs):
 
 
 # Function to create questions and answers using GPT
-def QA_maker(doc_splits,custom_prompt="None"):
+def QA_maker(api_key,doc_splits,custom_prompt="None"):
     with st.spinner("Making Q/As... Please wait."):
         try:
             print("Starting making Questions Answer ....")
@@ -157,7 +157,7 @@ def QA_maker(doc_splits,custom_prompt="None"):
                                                    f"INSTRUCTIONS:```{custom_prompt}```"
                                                    ))
 
-            llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
+            llm = ChatOpenAI(temperature=0,openai_api_key= api_key,model="gpt-3.5-turbo-0613")
             document_transformer = create_metadata_tagger(metadata_schema=schema, llm=llm)
             enhanced_documents = document_transformer.transform_documents(original_documents[:4])
             qa_list=[]
@@ -181,7 +181,7 @@ def QA_maker(doc_splits,custom_prompt="None"):
             return [],[]
 
 # Function to create MCQs based on questions and answers
-def MCQs_Maker(QAs,custom_prompt="None"):
+def MCQs_Maker(api_key,QAs,custom_prompt="None"):
     with st.spinner("Making MCQs... Please wait."):
         try:
             print("Starting Making MCQS")
@@ -237,7 +237,7 @@ def MCQs_Maker(QAs,custom_prompt="None"):
                 f"Instructions:```{custom_prompt}```"
                 ))
             # Must be an OpenAI model that supports functions
-            llm = ChatOpenAI(temperature=1, model="gpt-3.5-turbo-0613")
+            llm = ChatOpenAI(temperature=1,openai_api_key=api_key, model="gpt-3.5-turbo-0613")
             document_transformer = create_metadata_tagger(metadata_schema=schema, llm=llm)
             enhanced_documents = document_transformer.transform_documents(original_documents)
             MCQ_list=[]
@@ -255,12 +255,12 @@ if __name__ == '__main__':
 
     with st.sidebar:
         st.title("📝 PDF MCQs Generator App")
-        openai_api_key = st.text_input(
+        api_key = st.text_input(
             "OpenAI API Key",
             type="password",
             placeholder="Paste your OpenAI API key here",
             help="You can get your API key from https://platform.openai.com/account/api-keys.",
-            value=os.environ.get("OPENAI_API_KEY", None) or st.session_state.get("OPENAI_API_KEY", ""),
+            value=""
         )
 
         supabase_url = st.text_input(
@@ -268,14 +268,14 @@ if __name__ == '__main__':
             type="password",
             placeholder="Paste your SUPABASE URL here",
             help="Vist, https://supabase.com/",
-            value=os.environ.get("SUPABASE_URL", "")
+            value=""
         )
 
         supabase_service_key = st.text_input(
             "SUPABASE SERVICE KEY",
             type="password",
             placeholder="Paste your SUPABASE SERVICE KEY here",
-            value=os.environ.get("SUPABASE_SERVICE_KEY", "")
+            value=""
         )
 
         st.markdown("---")
@@ -294,21 +294,21 @@ if __name__ == '__main__':
     #  Main page
     st.title("📝 PDF MCQs Generator App")
 
-    if not (openai_api_key and supabase_url and supabase_service_key):
+    if not (api_key and supabase_url and supabase_service_key):
         st.warning(
             "Enter your API keys in the sidebar."
         )
-    else:
-        os.environ["OPENAI_API_KEY"] = openai_api_key
-        os.environ["SUPABASE_URL"] = supabase_url
-        os.environ["SUPABASE_SERVICE_KEY"] = supabase_service_key
+    # else:
+    #     os.environ["OPENAI_API_KEY"] = openai_api_key
+    #     os.environ["SUPABASE_URL"] = supabase_url
+    #     os.environ["SUPABASE_SERVICE_KEY"] = supabase_service_key
 
     # File input
     uploaded_files = None
     custom_prompt1 = "Questions statements should be clear."
     custom_prompt2 = "Give logical explaination of incorrect options."
 
-    if os.environ.get("OPENAI_API_KEY", None) and os.environ.get("SUPABASE_URL", None) and os.environ.get("SUPABASE_SERVICE_KEY", None):
+    if api_key and supabase_url and supabase_service_key:
         # Initializing OpenAI embeddings
         embeddings = OpenAIEmbeddings()
         supabase_url = os.environ.get("SUPABASE_URL")
@@ -356,11 +356,11 @@ if __name__ == '__main__':
                         if doc_splits:
                             print("Splits: ", len(doc_splits))
                             store_doc_to_supabase(doc_splits,vector_store)
-                            QAs_docs, QAs_List = QA_maker(doc_splits, custom_prompt1)
+                            QAs_docs, QAs_List = QA_maker(api_key,doc_splits, custom_prompt1)
                             if QAs_docs:
                                 store_qa_to_supabase(QAs_docs,vector_store_for_qa)
                                 if QAs_List:
-                                    mcqs = MCQs_Maker(QAs_List[:4],custom_prompt2)
+                                    mcqs = MCQs_Maker(api_key,QAs_List[:4],custom_prompt2)
                                     store_mcqs_to_supabase(mcqs,vector_store_for_mcqs)
                                     if "Mcqs" in st.session_state:
                                         st.session_state["Mcqs"].extend(mcqs)
@@ -388,7 +388,7 @@ if __name__ == '__main__':
             )
             answer=""
             if question:
-                llm = ChatOpenAI(model_name="gpt-3.5-turbo-0613", temperature=0.7)
+                llm = ChatOpenAI(model_name="gpt-3.5-turbo-0613",openai_api_key=api_key, temperature=0.7)
                 qa_chain = RetrievalQA.from_chain_type(
                     llm,
                     retriever=vector_store.as_retriever()
