@@ -1,5 +1,4 @@
 import streamlit as st
-import os
 import json
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import SupabaseVectorStore
@@ -7,10 +6,8 @@ from supabase.client import Client, create_client
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
-from langchain.chat_models import ChatOpenAI
 from langchain.document_transformers.openai_functions import create_metadata_tagger
 from dotenv import load_dotenv
-from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain.chat_models import ChatOpenAI
 
@@ -116,7 +113,7 @@ def store_mcqs_to_supabase(doc_splits,vector_store_for_mcqs):
 
 
 # Function to create questions and answers using GPT
-def QA_maker(api_key,doc_splits,custom_prompt="None"):
+def QA_maker(api_key,doc_splits,custom_prompt="None",gptmodel="gpt-4"):
     with st.spinner("Making Q/As... Please wait."):
         try:
             print("Starting making Questions Answer ....")
@@ -157,9 +154,9 @@ def QA_maker(api_key,doc_splits,custom_prompt="None"):
                                                    f"INSTRUCTIONS:```{custom_prompt}```"
                                                    ))
 
-            llm = ChatOpenAI(temperature=0,openai_api_key= api_key,model="gpt-3.5-turbo-0613")
+            llm = ChatOpenAI(temperature=0,openai_api_key= api_key,model=gptmodel)
             document_transformer = create_metadata_tagger(metadata_schema=schema, llm=llm)
-            enhanced_documents = document_transformer.transform_documents(original_documents[:4])
+            enhanced_documents = document_transformer.transform_documents(original_documents)
             qa_list=[]
             qa_documents=[]
             for index, doc in enumerate(enhanced_documents):
@@ -181,7 +178,7 @@ def QA_maker(api_key,doc_splits,custom_prompt="None"):
             return [],[]
 
 # Function to create MCQs based on questions and answers
-def MCQs_Maker(api_key,QAs,custom_prompt="None"):
+def MCQs_Maker(api_key,QAs,custom_prompt="None",gptmodel="gpt-4"):
     with st.spinner("Making MCQs... Please wait."):
         try:
             print("Starting Making MCQS")
@@ -237,7 +234,7 @@ def MCQs_Maker(api_key,QAs,custom_prompt="None"):
                 f"Instructions:```{custom_prompt}```"
                 ))
             # Must be an OpenAI model that supports functions
-            llm = ChatOpenAI(temperature=1,openai_api_key=api_key, model="gpt-3.5-turbo-0613")
+            llm = ChatOpenAI(temperature=1,openai_api_key=api_key, model=gptmodel)
             document_transformer = create_metadata_tagger(metadata_schema=schema, llm=llm)
             enhanced_documents = document_transformer.transform_documents(original_documents)
             MCQ_list=[]
@@ -262,7 +259,7 @@ if __name__ == '__main__':
             help="You can get your API key from https://platform.openai.com/account/api-keys.",
             value=""
         )
-
+        gptmodel=st.selectbox("Select a model:", ["gpt-4", "gpt-3.5-turbo-0613"])
         supabase_url = st.text_input(
             "SUPABASE URL",
             type="password",
@@ -354,11 +351,11 @@ if __name__ == '__main__':
                         if doc_splits:
                             print("Splits: ", len(doc_splits))
                             store_doc_to_supabase(doc_splits,vector_store)
-                            QAs_docs, QAs_List = QA_maker(api_key,doc_splits, custom_prompt1)
+                            QAs_docs, QAs_List = QA_maker(api_key,doc_splits, custom_prompt1,gptmodel)
                             if QAs_docs:
                                 store_qa_to_supabase(QAs_docs,vector_store_for_qa)
                                 if QAs_List:
-                                    mcqs = MCQs_Maker(api_key,QAs_List[:4],custom_prompt2)
+                                    mcqs = MCQs_Maker(api_key,QAs_List,custom_prompt2,gptmodel)
                                     store_mcqs_to_supabase(mcqs,vector_store_for_mcqs)
                                     if "Mcqs" in st.session_state:
                                         st.session_state["Mcqs"].extend(mcqs)
@@ -386,7 +383,7 @@ if __name__ == '__main__':
             )
             answer=""
             if question:
-                llm = ChatOpenAI(model_name="gpt-3.5-turbo-0613",openai_api_key=api_key, temperature=0.7)
+                llm = ChatOpenAI(model_name=gptmodel,openai_api_key=api_key, temperature=0.7)
                 qa_chain = RetrievalQA.from_chain_type(
                     llm,
                     retriever=vector_store.as_retriever()
@@ -422,13 +419,13 @@ if __name__ == '__main__':
                 for x, m in enumerate(st.session_state["Related"]):
                     mcq = m.metadata
                     col1, col2, col3, col4 = st.columns((2, 2, 1, 1))
-                    col1.write(mcq["Question_Statement"])  # index
-                    col2.write(mcq["Correct_Option"])  # email
+                    col1.write(mcq["Question_Statement"])
+                    col2.write(mcq["Correct_Option"])
                     button_type = "Related"
                     button_phold = col3.empty()
                     button_phold1 = col4.empty()
                     if button_phold.button(button_type,key=x, type="primary"):
-                        st.session_state["Related"]=vector_store_for_mcqs.similarity_search(m.page_content,2)
+                        st.session_state["Related"]=vector_store_for_mcqs.similarity_search(m.page_content,5)
                         st.experimental_rerun()
                     if button_phold1.button("Ask Question", key=str(x) + "_", type="primary"):
                         st.session_state["AskQuestion"] = {"question": mcq["Question_Statement"],
@@ -451,13 +448,13 @@ if __name__ == '__main__':
                     for x, m in enumerate(st.session_state["Mcqs"]):
                         mcq=m.metadata
                         col1, col2,col3,col4 = st.columns((2, 2, 1,1))
-                        col1.write(mcq["Question_Statement"])  # index
-                        col2.write(mcq["Correct_Option"])  # email
+                        col1.write(mcq["Question_Statement"])
+                        col2.write(mcq["Correct_Option"])
                         button_type = "Related"
                         button_phold = col3.empty()
                         button_phold1 = col4.empty()
                         if button_phold.button(button_type,key=x,type="primary"):
-                            st.session_state["Related"] = vector_store_for_mcqs.similarity_search(m.page_content, 2)
+                            st.session_state["Related"] = vector_store_for_mcqs.similarity_search(m.page_content, 5)
                             st.experimental_rerun()
                         if button_phold1.button("Ask Question",key=str(x)+"_",type="primary"):
                             st.session_state["AskQuestion"]={"question":mcq["Question_Statement"],"answer":mcq["Correct_Option"]}
