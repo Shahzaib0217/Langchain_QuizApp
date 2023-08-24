@@ -284,7 +284,6 @@ if __name__ == '__main__':
         )
 
         "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
-        "[View the source code](https://github.com/streamlit/llm-examples/blob/main/Chatbot.py)"
 
 
 
