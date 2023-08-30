@@ -148,13 +148,15 @@ def QA_maker(api_key,doc_splits,custom_prompt="None",gptmodel="gpt-4"):
             for doc_it in doc_splits:
                 original_documents.append(Document(page_content=
                                                    f"Context\n:```{doc_it.page_content}```\n"
-                                                   f"You have to make all the Questions and Answers from this context\n"
+                                                   f"You have to make all the Questions and Answers from this context which follows the given Instructions\n"
                                                    f"(These Questions Answers will be convert in the MCQs in future but not now)\n"
                                                    f"Please strictly follow the instructions given below for making Questions and Answers(which questions you will make and which question you will skip)\n"
-                                                   f"INSTRUCTIONS:```{custom_prompt}```"
+                                                   f"INSTRUCTIONS:```"
+                                                   f"Quality of Question and Answer should be high do make simple and childish Q/A's\n"
+                                                   f"{custom_prompt}```"
                                                    ))
 
-            llm = ChatOpenAI(temperature=0,openai_api_key= api_key,model=gptmodel)
+            llm = ChatOpenAI(temperature=1,openai_api_key= api_key,model=gptmodel)
             document_transformer = create_metadata_tagger(metadata_schema=schema, llm=llm)
             enhanced_documents = document_transformer.transform_documents(original_documents)
             qa_list=[]
@@ -165,10 +167,6 @@ def QA_maker(api_key,doc_splits,custom_prompt="None",gptmodel="gpt-4"):
                 if len(metadata_qas)>0:
                     for qa in metadata_qas:
                         qa_documents.append(Document(page_content=json.dumps(qa),metadata=original_documents[index].metadata))
-            output_file = "Questions.json"
-            with open(output_file, "w") as f:
-                json.dump(qa_list, f, indent=2)
-            print(f"Questions saved to {output_file}")
             print("Question Answer have been created!")
             st.success("Q/As have been created!")
             return qa_documents,qa_list
